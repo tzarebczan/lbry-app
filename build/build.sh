@@ -67,7 +67,9 @@ npm install
 
   # copy requirements from lbry, but remove lbryum (we'll add it back in below)
   grep -v lbryum "$ROOT/lbry/requirements.txt" > requirements.txt
+
   # for electron, we install lbryum and lbry using submodules
+  echo "../lbryschema" >> requirements.txt
   echo "../lbryum" >> requirements.txt
   echo "../lbry" >> requirements.txt
   # also add pyinstaller

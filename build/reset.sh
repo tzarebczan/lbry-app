@@ -17,5 +17,11 @@ cd "$ROOT"
   git reset --hard origin/master
 )
 
+(
+  cd lbryschema
+  git tag -d $(git describe)
+  git reset --hard origin/master
+)
+
 git tag -d $(git describe)
 git reset --hard HEAD~1

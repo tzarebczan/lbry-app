@@ -4,3 +4,6 @@
 [submodule "lbryum"]
 	path = lbryum
 	url = https://github.com/lbryio/lbryum.git
+[submodule "lbryschema"]
+	path = lbryschema
+	url = git@github.com:lbryio/lbryschema.git
