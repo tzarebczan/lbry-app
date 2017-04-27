@@ -1,72 +1,160 @@
 import React from 'react';
 import {Link} from './link.js';
-import {Icon} from './common.js';
+import {Icon, CreditAmount} from './common.js';
 
 var Header = React.createClass({
+  _balanceSubscribeId: null,
+
   getInitialState: function() {
     return {
-      title: "LBRY",
-      isScrolled: false
+      balance: 0
     };
   },
-  componentWillMount: function() {
-    new MutationObserver(function(mutations) {
-      this.setState({ title: mutations[0].target.textContent });
-    }.bind(this)).observe(
-      document.querySelector('title'),
-      { subtree: true, characterData: true, childList: true }
-    );
-  },
   componentDidMount: function() {
-    document.addEventListener('scroll', this.handleScroll);
-  },
-  componentWillUnmount: function() {
-    document.removeEventListener('scroll', this.handleScroll);
-    if (this.userTypingTimer)
-    {
-      clearTimeout(this.userTypingTimer);
-    }
-  },
-  handleScroll: function() {
-    this.setState({
-      isScrolled: document.body.scrollTop > 0
+    this._balanceSubscribeId = lbry.balanceSubscribe((balance) => {
+      this.setState({ balance: balance });
     });
   },
-  onQueryChange: function(event) {
-
-    if (this.userTypingTimer)
-    {
-      clearTimeout(this.userTypingTimer);
+  componentWillUnmount: function() {
+    if (this._balanceSubscribeId) {
+      lbry.balanceUnsubscribe(this._balanceSubscribeId)
     }
-
-    //@TODO: Switch to React.js timing
-    var searchTerm = event.target.value;
-    this.userTypingTimer = setTimeout(() => {
-      this.props.onSearch(searchTerm);
-    }, 800); // 800ms delay, tweak for faster/slower
+  },
+  onBack: function() {
 
   },
+  render: function() {
+    return <div>
+      <header id="header">
+        <div className="header__item">
+          <Link onClick={() => { history.back() }} button="alt button--flat" icon="icon-arrow-left" />
+        </div>
+        <div className="header__item">
+          <Link href="?discover" button="alt button--flat" icon="icon-home" />
+        </div>
+        <div className="header__item header__item--wunderbar">
+          <WunderBar address={this.props.address} icon={this.props.wunderBarIcon} onSearch={this.props.onSearch} />
+        </div>
+        <div className="header__item">
+          <Link href="?wallet" button="text" icon="icon-bank" label={lbry.formatCredits(this.state.balance, 1)} ></Link>
+        </div>
+        <div className="header__item">
+          <Link button="primary button--flat" href="?publish" icon="icon-upload" label="Publish" />
+        </div>
+        <div className="header__item">
+          <Link button="alt button--flat" href="?downloaded" icon="icon-folder" />
+        </div>
+        <div className="header__item">
+          <Link button="alt button--flat" href="?settings" icon="icon-gear" />
+        </div>
+      </header>
+      {this.props.links ?
+       <SubHeader links={this.props.links} viewingPage={this.props.viewingPage} /> :
+       ''}
+    </div>
+  }
+  /*
   render: function() {
     return (
       <header id="header" className={ (this.state.isScrolled ? 'header-scrolled' : 'header-unscrolled') + ' ' + (this.props.links ? 'header-with-subnav' : 'header-no-subnav') }>
         <div className="header-top-bar">
           <Link onClick={this.props.onOpenDrawer} icon="icon-bars" className="open-drawer-link" />
-          <h1>{ this.state.title }</h1>
-          <div className="header-search">
-            <Icon icon="icon-search" />
-            <input type="search" onChange={this.onQueryChange} defaultValue={this.props.initialQuery}
-                 placeholder="Find movies, music, games, and more"/>
-          </div>
+          <input className="wunderbar__input" type="search" onChange={this.onQueryChange} value={ this.state.title }
+               placeholder="Find movies, music, games, and more"/>
         </div>
-        {
-          this.props.links ?
-            <SubHeader links={this.props.links} viewingPage={this.props.viewingPage} /> :
-            ''
-        }
+
       </header>
     );
-  }
+  }*/
 });
+
+let WunderBar = React.createClass({
+  _userTypingTimer: null,
+  _input: null,
+  _stateBeforeSearch: null,
+
+  getInitialState: function() {
+    return {
+      address: this.props.address,
+      icon: this.props.icon
+    };
+  },
+  componentWillMount: function() {
+    //observe document.title sets (this is dumb, but the way it works currently)
+    // new MutationObserver(function(mutations) {
+    //   this.setState({ address: mutations[0].target.textContent });
+    // }.bind(this)).observe(
+    //   document.querySelector('title'),
+    //   { subtree: true, characterData: true, childList: true }
+    // );
+  },
+  componentWillUnmount: function() {
+    if (this.userTypingTimer) {
+      clearTimeout(this._userTypingTimer);
+    }
+  },
+  onChange: function(event) {
+
+    if (this._userTypingTimer)
+    {
+      clearTimeout(this._userTypingTimer);
+    }
+
+    this.setState({ address: event.target.value })
+
+    //@TODO: Switch to React.js timing
+    var searchTerm = event.target.value;
+
+    this._userTypingTimer = setTimeout(() => {
+      this.props.onSearch(searchTerm);
+    }, 800); // 800ms delay, tweak for faster/slower
+
+  },
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.address !== this.state.address || nextProps.icon !== this.state.icon) {
+      this.setState({ address: nextProps.address, icon: nextProps.icon });
+    }
+  },
+  onFocus: function() {
+    this._stateBeforeSearch = this.state;
+    let newState = {
+      icon: "icon-search"
+    }
+    // this._input.value = ""; //trigger placeholder
+    this._focusPending = true;
+    if (!this.state.address.match(/^lbry:\/\//)) //onFocus, if they are not on an exact URL, clear the bar
+    {
+      newState.address = "";
+    }
+    this.setState(newState);
+  },
+  onBlur: function() {
+    this.setState(this._stateBeforeSearch);
+    this._input.value = this.state.address;
+  },
+  componentDidUpdate: function() {
+    this._input.value = this.state.address;
+    if (this._input && this._focusPending) {
+      this._input.select();
+      this._focusPending = false;
+    }
+  },
+  onReceiveRef: function(ref) {
+    this._input = ref;
+  },
+  render: function() {
+    return <div className="wunderbar">
+      {this.state.icon ? <Icon fixed icon={this.state.icon} /> : '' }
+      <input className="wunderbar__input" type="search" placeholder="Type a LBRY address or search term"
+             ref={this.onReceiveRef}
+             onFocus={this.onFocus}
+             onBlur={this.onBlur}
+             onChange={this.onChange}
+             value={ this.state.address }
+             placeholder="Find movies, music, games, and more" />
+      </div>
+  }
+})
 
 var SubHeader =  React.createClass({
   render: function() {
