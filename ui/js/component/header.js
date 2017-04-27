@@ -4,6 +4,7 @@ import {Icon, CreditAmount} from './common.js';
 
 var Header = React.createClass({
   _balanceSubscribeId: null,
+  _isMounted: false,
 
   getInitialState: function() {
     return {
@@ -11,11 +12,15 @@ var Header = React.createClass({
     };
   },
   componentDidMount: function() {
+    this._isMounted = true;
     this._balanceSubscribeId = lbry.balanceSubscribe((balance) => {
-      this.setState({ balance: balance });
+      if (this._isMounted) {
+        this.setState({balance: balance});
+      }
     });
   },
   componentWillUnmount: function() {
+    this._isMounted = false;
     if (this._balanceSubscribeId) {
       lbry.balanceUnsubscribe(this._balanceSubscribeId)
     }
@@ -24,8 +29,7 @@ var Header = React.createClass({
 
   },
   render: function() {
-    return <div>
-      <header id="header">
+    return <header id="header">
         <div className="header__item">
           <Link onClick={() => { history.back() }} button="alt button--flat" icon="icon-arrow-left" />
         </div>
@@ -48,10 +52,6 @@ var Header = React.createClass({
           <Link button="alt button--flat" href="?settings" icon="icon-gear" />
         </div>
       </header>
-      {this.props.links ?
-       <SubHeader links={this.props.links} viewingPage={this.props.viewingPage} /> :
-       ''}
-    </div>
   }
   /*
   render: function() {
@@ -118,7 +118,8 @@ let WunderBar = React.createClass({
   onFocus: function() {
     this._stateBeforeSearch = this.state;
     let newState = {
-      icon: "icon-search"
+      icon: "icon-search",
+      isActive: true
     }
     // this._input.value = ""; //trigger placeholder
     this._focusPending = true;
@@ -129,7 +130,7 @@ let WunderBar = React.createClass({
     this.setState(newState);
   },
   onBlur: function() {
-    this.setState(this._stateBeforeSearch);
+    this.setState(Object.assign({}, this._stateBeforeSearch, { isActive: false }));
     this._input.value = this.state.address;
   },
   componentDidUpdate: function() {
@@ -143,7 +144,7 @@ let WunderBar = React.createClass({
     this._input = ref;
   },
   render: function() {
-    return <div className="wunderbar">
+    return <div className={"wunderbar" + (this.state.isActive ? " wunderbar--active" : "")}>
       {this.state.icon ? <Icon fixed icon={this.state.icon} /> : '' }
       <input className="wunderbar__input" type="search" placeholder="Type a LBRY address or search term"
              ref={this.onReceiveRef}
@@ -156,9 +157,9 @@ let WunderBar = React.createClass({
   }
 })
 
-var SubHeader =  React.createClass({
+export let SubHeader =  React.createClass({
   render: function() {
-    var links = [],
+    let links = [],
         viewingUrl = '?' + this.props.viewingPage;
 
     for (let link of Object.keys(this.props.links)) {
@@ -169,7 +170,7 @@ var SubHeader =  React.createClass({
       );
     }
     return (
-      <nav className="sub-header">
+      <nav className={'sub-header' + (this.props.modifier ? ' sub-header--' + this.props.modifier : '')}>
         {links}
       </nav>
     );
