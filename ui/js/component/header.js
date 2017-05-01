@@ -37,10 +37,12 @@ var Header = React.createClass({
           <Link href="?discover" button="alt button--flat" icon="icon-home" />
         </div>
         <div className="header__item header__item--wunderbar">
-          <WunderBar address={this.props.address} icon={this.props.wunderBarIcon} onSearch={this.props.onSearch} viewingPage={this.props.viewingPage} />
+          <WunderBar address={this.props.address} icon={this.props.wunderBarIcon}
+                     onSearch={this.props.onSearch} onSearchCleared={this.props.onSearchCleared}
+                     viewingPage={this.props.viewingPage} />
         </div>
         <div className="header__item">
-          <Link href="?wallet" button="text" icon="icon-bank" label={lbry.formatCredits(this.state.balance, 1)} ></Link>
+          <Link href="?wallet" button="text" icon="icon-bank" label={lbry.formatCredits(this.state.balance, 1)} />
         </div>
         <div className="header__item">
           <Link button="primary button--flat" href="?publish" icon="icon-upload" label="Publish" />
@@ -132,6 +134,7 @@ let WunderBar = React.createClass({
   onBlur: function() {
     this.setState(Object.assign({}, this._stateBeforeSearch, { isActive: false }));
     this._input.value = this.state.address;
+    this.props.onSearchCleared();
   },
   componentDidUpdate: function() {
     this._input.value = this.state.address;

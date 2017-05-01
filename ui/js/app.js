@@ -40,6 +40,8 @@ var App = React.createClass({
   _fullScreenPages: ['watch'],
 
   _upgradeDownloadItem: null,
+  _lastViewedPage: null,
+  _lastViewedPageArgs: null,
   _isMounted: false,
   _version: null,
   getUpdateUrl: function() {
@@ -207,9 +209,17 @@ var App = React.createClass({
     });
   },
   onSearch: function(term) {
+    this._lastViewedPage = this.state.viewingPage;
+    this._lastViewedPageArgs = this.state.pageArgs;
     this.setState({
       viewingPage: 'discover',
       pageArgs: term
+    });
+  },
+  onSearchCleared: function(term) {
+    this.setState({
+      viewingPage: this._lastViewedPage,
+      pageArgs: this._lastViewedPageArgs,
     });
   },
   alertError: function(error) {
@@ -265,7 +275,7 @@ var App = React.createClass({
         mainContent :
         <div id="window">
           <Header onOpenDrawer={this.openDrawer} address={address} wunderBarIcon={wunderBarIcon}
-                   onSearch={this.onSearch} viewingPage={this.state.viewingPage} />
+                   onSearch={this.onSearch} onSearchCleared={this.onSearchCleared} viewingPage={this.state.viewingPage} />
           <div id="main-content">
             {mainContent}
           </div>
