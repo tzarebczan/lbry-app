@@ -89,15 +89,7 @@ class PublishPage extends React.Component {
       return;
     }
 
-    if (this.state.nameIsMine) {
-      // Pre-populate with existing metadata
-      var metadata = Object.assign({}, this.state.myClaimMetadata);
-      if (this.refs.file.getValue() !== '') {
-        delete metadata.sources;
-      }
-    } else {
-      var metadata = {};
-    }
+    let metadata = {};
 
     for (let metaField of ['title', 'description', 'thumbnail', 'license', 'license_url', 'language']) {
       var value = this.refs['meta_' + metaField].getValue();
