@@ -28,6 +28,15 @@ class PublishPage extends React.Component {
       topClaimValue: 0.0,
       myClaimValue: 0.0,
       myClaimMetadata: null,
+      metadata: {
+        title: '',
+        thumbnail: '',
+        description: '',
+        language: 'en',
+        nsfw: '0',
+        license: '',
+        license_url: '',
+      },
       copyrightNotice: '',
       otherLicenseDescription: '',
       otherLicenseUrl: '',
@@ -92,18 +101,13 @@ class PublishPage extends React.Component {
     let metadata = {};
 
     for (let metaField of ['title', 'description', 'thumbnail', 'license', 'license_url', 'language']) {
-      var value = this.refs['meta_' + metaField].getValue();
-      if (value !== '') {
+      const value = this.state.metadata[metaField];
+      if (value) {
         metadata[metaField] = value;
       }
     }
 
-    metadata.nsfw = parseInt(this.refs.meta_nsfw.getValue()) === 1;
-
-    const licenseUrl = this.refs.meta_license_url.getValue();
-    if (licenseUrl) {
-      metadata.license_url = licenseUrl;
-    }
+    metadata.nsfw = !!parseInt(this.state.metadata.nsfw);
 
     var doPublish = () => {
       var publishArgs = {
@@ -114,7 +118,7 @@ class PublishPage extends React.Component {
       };
 
       if (this.refs.file.getValue() !== '') {
-	      publishArgs.file_path = this.refs.file.getValue();
+        publishArgs.file_path = this.refs.file.getValue();
       }
 
       lbry.publish(publishArgs, (message) => {
@@ -198,13 +202,14 @@ class PublishPage extends React.Component {
           nameResolved: false,
         });
       } else {
+        const myClaimMetadata = myClaimInfo ? myClaimInfo.value : null;
         const topClaimIsMine = myClaimInfo && myClaimInfo.amount >= claimInfo.amount;
         const newState = {
           nameResolved: true,
           topClaimValue: parseFloat(claimInfo.amount),
           myClaimExists: !!myClaimInfo,
           myClaimValue: myClaimInfo ? parseFloat(myClaimInfo.amount) : null,
-          myClaimMetadata: myClaimInfo ? myClaimInfo.value : null,
+          myClaimMetadata: myClaimMetadata,
           topClaimIsMine: topClaimIsMine,
         };
 
@@ -247,6 +252,12 @@ class PublishPage extends React.Component {
   handleFeePrefChange(feeEnabled) {
     this.setState({
       isFee: feeEnabled
+    });
+  }
+
+  handleMetadataChange(event) {
+    this.setState({
+      metadata: {... this.state.metadata, ... {[event.target.name]: event.target.value}},
     });
   }
 
@@ -345,13 +356,23 @@ class PublishPage extends React.Component {
     });
   }
 
+  getLicenseDescription() {
+    if (!this._meta_license) { // first render
+      return '';
+    } else if (this.state.otherLicenseChosen) {
+      return this.state.otherLicenseDescription;
+    } else {
+      return this.metadata.license_description; //this._meta_license.getSelectedElement().getAttribute('data-url') || '' ;
+    }
+  }
+
   getLicenseUrl() {
-    if (!this.refs.meta_license) {
+    if (!this._meta_license) { // first render
       return '';
     } else if (this.state.otherLicenseChosen) {
       return this.state.otherLicenseUrl;
     } else {
-      return this.refs.meta_license.getSelectedElement().getAttribute('data-url') || '' ;
+      return this._meta_license.getSelectedElement().getAttribute('data-url') || '' ;
     }
   }
 
@@ -412,16 +433,22 @@ class PublishPage extends React.Component {
             { !this.state.hasFile ? '' :
                 <div>
                 <div className="card__content">
-                  <FormRow label="Title" type="text" ref="meta_title" name="title" placeholder="Titular Title" />
+                  <FormRow label="Title" type="text" name="title" value={this.state.metadata.title}
+                           placeholder="Titular Title" onChange={(event) => { this.handleMetadataChange(event) }} />
                 </div>
                 <div className="card__content">
-                  <FormRow type="text" label="Thumbnail URL" ref="meta_thumbnail" name="thumbnail" placeholder="http://spee.ch/mylogo" />
+                  <FormRow type="text" label="Thumbnail URL" name="thumbnail"
+                           value={this.state.metadata.thumbnail} placeholder="http://spee.ch/mylogo"
+                           onChange={(event) => { this.handleMetadataChange(event)}} />
                 </div>
                 <div className="card__content">
-                  <FormRow label="Description" type="textarea" ref="meta_description" name="description" placeholder="Description of your content" />
+                  <FormRow label="Description" type="textarea" name="description"
+                           value={this.state.metadata.description} placeholder="Description of your content"
+                           onChange={(event) => { this.handleMetadataChange(event) }} />
                 </div>
                 <div className="card__content">
-                  <FormRow label="Language" type="select" defaultValue="en" ref="meta_language" name="language">
+                  <FormRow label="Language" type="select" value={this.state.metadata.language}
+                           name="language" onChange={(event) => { this.handleMetadataChange(event) }}>
                     <option value="en">English</option>
                     <option value="zh">Chinese</option>
                     <option value="fr">French</option>
@@ -432,7 +459,8 @@ class PublishPage extends React.Component {
                   </FormRow>
                 </div>
                 <div className="card__content">
-                  <FormRow type="select" label="Maturity" defaultValue="en" ref="meta_nsfw" name="nsfw">
+                  <FormRow type="select" label="Maturity" name="nsfw"
+                           onChange={(event) => { this.handleMetadataChange(event) }}>
                     {/* <option value=""></option> */}
                     <option value="0">All Ages</option>
                     <option value="1">Adults Only</option>
@@ -465,7 +493,7 @@ class PublishPage extends React.Component {
                   <div className="form-field__helper">
                     If you choose to price this content in dollars, the number of credits charged will be adjusted based on the value of LBRY credits at the time of purchase.
                   </div> : '' }
-              <FormRow label="License" type="select" ref="meta_license" name="license" onChange={(event) => { this.handleLicenseChange(event) }}>
+              <FormRow label="License" type="select" ref={(row) => { this._meta_license = row }} name="license" onChange={(event) => { this.handleLicenseChange(event) }}>
                 <option></option>
                 <option>Public Domain</option>
                 <option data-url="https://creativecommons.org/licenses/by/4.0/legalcode">Creative Commons Attribution 4.0 International</option>
@@ -477,13 +505,18 @@ class PublishPage extends React.Component {
                 <option data-license-type="copyright" {... this.state.copyrightChosen ? {value: this.state.copyrightNotice} : {}}>Copyrighted...</option>
                 <option data-license-type="other" {... this.state.otherLicenseChosen ? {value: this.state.otherLicenseDescription} : {}}>Other...</option>
               </FormRow>
-              <FormField type="hidden" ref="meta_license_url" name="license_url" value={this.getLicenseUrl()} />
+
+              <FormField type="hidden" name="license_description" value={(event) => { this.getLicenseDescription(event) }}
+                         onChange={(event) => { this.handleMetadataChange(event) }} />
+              <FormField type="hidden" name="license_url" value={this.getLicenseUrl()}
+                         onChange={(event) => { this.handleMetadataChange(event) }} />
+
               {this.state.copyrightChosen
                 ?  <FormRow label="Copyright notice" type="text" name="copyright-notice"
                             value={this.state.copyrightNotice} onChange={(event) => { this.handleCopyrightNoticeChange(event) }} />
                 : null}
               {this.state.otherLicenseChosen ?
-               <FormRow label="License description" type="text" name="other-license-description" onChange={(event) => { this.handleOtherLicenseDescriptionChange() }} />
+               <FormRow label="License description" type="text" name="other-license-description" onChange={(event) => { this.handleOtherLicenseDescriptionChange(event) }} />
                 : null}
               {this.state.otherLicenseChosen ?
                <FormRow label="License URL" type="text" name="other-license-url" onChange={(event) => { this.handleOtherLicenseUrlChange(event) }} />
